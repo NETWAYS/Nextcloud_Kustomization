@@ -1,0 +1,11 @@
+resources:
+  - './nextcloud/namespace.yaml'
+  - './nextcloud/pvc.yaml'
+  - './nextcloud/service.yaml'
+  - './nextcloud/deployment.yaml'
+  - './nextcloud/ingress.yaml'
+  - './mariadb/pvc.yaml'
+  - './mariadb/service.yaml'
+  - './mariadb/statefulset.yaml'
+  - './redis/deployment.yaml'
+  - './redis/service.yaml'

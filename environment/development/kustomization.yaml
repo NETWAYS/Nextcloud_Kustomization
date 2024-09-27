@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nextcloud-deployment
+resources:
+  - ../../base/nextcloud-deployment
+  - secret.yaml
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: my-nextcloud.works.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: my-nextcloud.works.com
+    target:
+      kind: Ingress
+      name: nextcloud-ingress
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: nextcloud-config-sh
+    files:
+      - config.sh
+
+  - name: nextcloud-configuration
+    literals:
+      - nextcloud_trusted_domains=my-nextcloud.works.com
+      - cli_url=https://my-nextcloud.works.com
+      - nextcloud_admin_user=admin
+      - redis_host=redis
+      - php_memory_limit=716M
+      - php_upload_limit=2G
+
+  - name: mariadb-configuration
+    literals:
+      - mariadb_db=nextcloud
+      - mariadb_user=nextcloud
+      - mariadb_host=mariadb-service
+      - mariadb_init=--locale=C --encoding=UTF-8

@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-deployment
+spec:
+  revisionHistoryLimit: 2
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:    
+      containers:
+        - name: nextcloud
+          image: nextcloud:29.0.7
+          lifecycle:
+            postStart:
+              exec:
+                command: [ "/bin/bash", "-c", "apt update && apt install -y default-mysql-client" ]
+          env:
+            - name: OVERWRITEPROTOCOL
+              value: https
+            - name: OVERWRITECLIURL
+              valueFrom:
+                configMapKeyRef:
+                  key: cli_url
+                  name: nextcloud-configuration
+            - name: PHP_UPLOAD_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  key: php_upload_limit
+                  name: nextcloud-configuration
+            - name: PHP_MEMORY_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  key: php_memory_limit
+                  name: nextcloud-configuration                 
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: redis_host
+                  name: nextcloud-configuration
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              valueFrom:
+                configMapKeyRef:
+                  key: nextcloud_trusted_domains
+                  name: nextcloud-configuration
+            - name: NEXTCLOUD_ADMIN_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: nextcloud_admin_user
+                  name: nextcloud-configuration
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: credentials-secret
+                  key: admin_password
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: mariadb_user
+                  name: mariadb-configuration
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: credentials-secret
+                  key: mariadb_password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  key: mariadb_db
+                  name: mariadb-configuration
+            - name: MYSQL_HOST
+              value: mariadb-service
+            - name: NEXTCLOUD_DATA_DIR
+              value: '/var/www/html/data'
+          volumeMounts:
+            - mountPath: /docker-entrypoint-hooks.d/before-starting/config.sh
+              name: nextcloud-config-sh
+              subPath: config.sh
+            - mountPath: /var/www/html
+              name: nextcloud-data
+              subPath: nextcloud
+            - mountPath: /var/www/html/data
+              name: nextcloud-data
+              subPath: data
+            - mountPath: /var/www/html/custom_apps
+              name: nextcloud-data
+              subPath: custom_apps
+            - mountPath: /var/www/html/apps
+              name: nextcloud-data
+              subPath: apps
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: nextcloud-config-sh
+          configMap:
+            name: nextcloud-config-sh
+            items:
+              - key: config.sh
+                path: config.sh
+            defaultMode: 0755
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-pvc
